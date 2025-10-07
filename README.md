@@ -1,174 +1,431 @@
-<br /><br />
+# 🏗️ Construct.io
 
-<p align="center">
-<a href="https://plane.so">
-  <img src="https://media.docs.plane.so/logo/plane_github_readme.png" alt="Plane Logo" width="400">
-</a>
-</p>
-<p align="center"><b>Modern project management for all teams</b></p>
+> **Plataforma de Gestión de Proyectos para el sector AEC (Arquitectura, Ingeniería y Construcción)**
 
-<p align="center">
-<a href="https://discord.com/invite/A92xrEGCge">
-<img alt="Discord online members" src="https://img.shields.io/discord/1031547764020084846?color=5865F2&label=Discord&style=for-the-badge" />
-</a>
-<img alt="Commit activity per month" src="https://img.shields.io/github/commit-activity/m/makeplane/plane?style=for-the-badge" />
-</p>
+Construct.io es un sistema de gestión de proyectos especializado para el sector de construcción y desarrollo inmobiliario, basado en un fork de [Plane.so](https://github.com/makeplane/plane), adaptado específicamente para los flujos de trabajo del ecosistema AEC en Argentina.
 
-<p align="center">
-    <a href="https://plane.so/"><b>Website</b></a> •
-    <a href="https://github.com/makeplane/plane/releases"><b>Releases</b></a> •
-    <a href="https://twitter.com/planepowers"><b>Twitter</b></a> •
-    <a href="https://docs.plane.so/"><b>Documentation</b></a>
-</p>
+---
 
-<p>
-    <a href="https://app.plane.so/#gh-light-mode-only" target="_blank">
-      <img
-        src="https://media.docs.plane.so/GitHub-readme/github-top.webp"
-        alt="Plane Screens"
-        width="100%"
-      />
-    </a>
-</p>
+## 🎯 Propósito
 
-Meet [Plane](https://plane.so/), an open-source project management tool to track issues, run ~sprints~ cycles, and manage product roadmaps without the chaos of managing the tool itself. 🧘‍♀️
+El sector AEC tiene necesidades específicas que las herramientas genéricas de gestión de proyectos no cubren:
 
-> Plane is evolving every day. Your suggestions, ideas, and reported bugs help us immensely. Do not hesitate to join in the conversation on [Discord](https://discord.com/invite/A92xrEGCge) or raise a GitHub issue. We read everything and respond to most.
+- **Multi-tenant real:** Cada empresa/profesional es independiente pero colabora en proyectos compartidos
+- **Flujos de licitación:** Sistema de tender/bidding para asignación de trabajos
+- **Aprobaciones formales:** Entregables que requieren revisión y aprobación técnica
+- **Fases de proyecto:** Ciclo de vida específico (factibilidad → diseño → permisos → construcción → entrega)
+- **Gestión documental:** Planos, especificaciones, certificados con versionado y trazabilidad
+- **Colaboración cruzada:** Desarrolladores, arquitectos, ingenieros, constructores, proveedores trabajando en conjunto
 
-## 🚀 Installation
+Construct.io resuelve estos problemas aprovechando la sólida arquitectura de Plane.so y extendiéndola con lógica de negocio específica del sector construcción.
 
-Getting started with Plane is simple. Choose the setup that works best for you:
+---
 
-- **Plane Cloud**
-  Sign up for a free account on [Plane Cloud](https://app.plane.so)—it's the fastest way to get up and running without worrying about infrastructure.
+## 🏛️ Arquitectura
 
-- **Self-host Plane**
-  Prefer full control over your data and infrastructure? Install and run Plane on your own servers. Follow our detailed [deployment guides](https://developers.plane.so/self-hosting/overview) to get started.
+### Base Tecnológica (heredada de Plane.so)
 
-| Installation methods | Docs link                                                                                                                                                                               |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Docker               | [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://developers.plane.so/self-hosting/methods/docker-compose)         |
-| Kubernetes           | [![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)](https://developers.plane.so/self-hosting/methods/kubernetes) |
+**Backend:**
+- Django 4.2+ con Django REST Framework
+- PostgreSQL 14+ (base de datos principal)
+- Redis (cache y real-time)
+- Celery (background tasks)
 
-`Instance admins` can configure instance settings with [God mode](https://developers.plane.so/self-hosting/govern/instance-admin).
+**Frontend:**
+- Next.js 14 (App Router)
+- React 18 con TypeScript
+- Tailwind CSS + shadcn/ui
+- SWR para data fetching
 
-## 🌟 Features
+**DevOps:**
+- Docker & Docker Compose
+- AWS (ECS, RDS, S3, CloudFront)
+- GitHub Actions (CI/CD)
 
-- **Issues**
-  Efficiently create and manage tasks with a robust rich text editor that supports file uploads. Enhance organization and tracking by adding sub-properties and referencing related issues.
+### Extensiones AEC
 
-- **Cycles**
-  Maintain your team’s momentum with Cycles. Track progress effortlessly using burn-down charts and other insightful tools.
+**Modelos de Dominio:**
+```python
+# Tenant representa una empresa o profesional independiente
+Tenant
+  └── Users (empleados/colaboradores internos)
+  └── Projects (proyectos donde participa)
+  └── TenantCollaborations (relaciones con otros tenants)
 
-- **Modules**
-  Simplify complex projects by dividing them into smaller, manageable modules.
+# Project representa un desarrollo inmobiliario
+Project
+  └── Phases (Factibilidad, Diseño, Permisos, Construcción, etc.)
+      └── Workstreams (especializaciones asignables a tenants)
+          └── Deliverables (entregables con aprobación)
+              └── Documents (archivos versionados)
+```
 
-- **Views**
-  Customize your workflow by creating filters to display only the most relevant issues. Save and share these views with ease.
+**Flujos Clave:**
+- Asignación de workstreams a tenants externos
+- Licitaciones (tender/bidding process)
+- Aprobación/rechazo de deliverables
+- Gestión documental con versionado
+- Trazabilidad completa de cambios
 
-- **Pages**
-  Capture and organize ideas using Plane Pages, complete with AI capabilities and a rich text editor. Format text, insert images, add hyperlinks, or convert your notes into actionable items.
+---
 
-- **Analytics**
-  Access real-time insights across all your Plane data. Visualize trends, remove blockers, and keep your projects moving forward.
+## 🚀 Quick Start
 
-- **Drive** (_coming soon_): The drive helps you share documents, images, videos, or any other files that make sense to you or your team and align on the problem/solution.
+### Prerrequisitos
 
-## 🛠️ Local development
+- Docker & Docker Compose
+- Node.js 20+
+- Python 3.11+
+- PostgreSQL 14+ (o via Docker)
+- Redis (o via Docker)
 
-See [CONTRIBUTING](./CONTRIBUTING.md)
+### Instalación
 
-## ⚙️ Built with
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/tu-org/constructio.git
+cd constructio
 
-[![Next JS](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=green)](https://www.djangoproject.com/)
-[![Node JS](https://img.shields.io/badge/node.js-339933?style=for-the-badge&logo=Node.js&logoColor=white)](https://nodejs.org/en)
+# 2. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus configuraciones locales
 
-## 📸 Screenshots
+# 3. Iniciar servicios con Docker Compose
+docker-compose up -d
 
-  <p>
-    <a href="https://plane.so" target="_blank">
-      <img
-        src="https://media.docs.plane.so/GitHub-readme/github-work-items.webp"
-        alt="Plane Views"
-        width="100%"
-      />
-    </a>
-  </p>
-  <p>
-    <a href="https://plane.so" target="_blank">
-      <img
-        src="https://media.docs.plane.so/GitHub-readme/github-cycles.webp"
-        width="100%"
-      />
-    </a>
-  </p>
-  <p>
-    <a href="https://plane.so" target="_blank">
-      <img
-        src="https://media.docs.plane.so/GitHub-readme/github-modules.webp"
-        alt="Plane Cycles and Modules"
-        width="100%"
-      />
-    </a>
-  </p>
-  <p>
-    <a href="https://plane.so" target="_blank">
-      <img
-        src="https://media.docs.plane.so/GitHub-readme/github-views.webp"
-        alt="Plane Analytics"
-        width="100%"
-      />
-    </a>
-  </p>
-   <p>
-    <a href="https://plane.so" target="_blank">
-      <img
-        src="https://media.docs.plane.so/GitHub-readme/github-analytics.webp"
-        alt="Plane Pages"
-        width="100%"
-      />
-    </a>
-  </p>
-</p>
+# 4. Ejecutar migraciones
+docker-compose exec backend python manage.py migrate
 
-## 📝 Documentation
+# 5. Crear superusuario
+docker-compose exec backend python manage.py createsuperuser
 
-Explore Plane's [product documentation](https://docs.plane.so/) and [developer documentation](https://developers.plane.so/) to learn about features, setup, and usage.
+# 6. Cargar datos de ejemplo (opcional)
+docker-compose exec backend python manage.py loaddata fixtures/aec_demo.json
 
-## ❤️ Community
+# 7. Acceder a la aplicación
+# Frontend: http://localhost:3000
+# Backend Admin: http://localhost:8000/admin
+```
 
-Join the Plane community on [GitHub Discussions](https://github.com/orgs/makeplane/discussions) and our [Discord server](https://discord.com/invite/A92xrEGCge). We follow a [Code of conduct](https://github.com/makeplane/plane/blob/master/CODE_OF_CONDUCT.md) in all our community channels.
+### Desarrollo Local (sin Docker)
 
-Feel free to ask questions, report bugs, participate in discussions, share ideas, request features, or showcase your projects. We’d love to hear from you!
+```bash
+# Backend
+cd apiserver
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
 
-## 🛡️ Security
+# Frontend (nueva terminal)
+cd web
+npm install
+npm run dev
+```
 
-If you discover a security vulnerability in Plane, please report it responsibly instead of opening a public issue. We take all legitimate reports seriously and will investigate them promptly. See [Security policy](https://github.com/makeplane/plane/blob/master/SECURITY.md) for more info.
+---
 
-To disclose any security issues, please email us at security@plane.so.
+## 📁 Estructura del Proyecto
 
-## 🤝 Contributing
+```
+constructio/
+├── .claude/                      # Configuración Claude Code & agentes
+│   ├── master-plan.md           # Plan maestro de desarrollo
+│   ├── settings.local.json      # Config Claude Code
+│   ├── progress.md              # Log de progreso incremental
+│   └── commands/                # Comandos personalizados
+│
+├── apiserver/                   # Backend Django
+│   ├── plane/                   # App principal
+│   │   ├── api/                # REST API endpoints
+│   │   ├── db/models/          # Modelos Django (AEC extensions)
+│   │   ├── aec/                # Lógica de negocio AEC
+│   │   └── settings/           # Configuraciones
+│   └── requirements.txt
+│
+├── web/                         # Frontend Next.js
+│   ├── app/                    # Next.js 14 App Router
+│   ├── components/             # React components
+│   │   ├── aec/               # Componentes específicos AEC
+│   │   └── ui/                # Design system
+│   ├── lib/                   # Utilities & hooks
+│   └── package.json
+│
+├── docs/                        # Documentación
+│   ├── AEC_Brief.md            # Referencia industria construcción
+│   ├── API.md                  # Documentación API
+│   ├── ARCHITECTURE.md         # Arquitectura técnica
+│   └── DEPLOYMENT.md           # Guía de deployment
+│
+├── docker/                      # Dockerfiles & configs
+├── nginx/                       # Configuración Nginx
+└── docker-compose.yml
+```
 
-There are many ways you can contribute to Plane:
+---
 
-- Report [bugs](https://github.com/makeplane/plane/issues/new?assignees=srinivaspendem%2Cpushya22&labels=%F0%9F%90%9Bbug&projects=&template=--bug-report.yaml&title=%5Bbug%5D%3A+) or submit [feature requests](https://github.com/makeplane/plane/issues/new?assignees=srinivaspendem%2Cpushya22&labels=%E2%9C%A8feature&projects=&template=--feature-request.yaml&title=%5Bfeature%5D%3A+).
-- Review the [documentation](https://docs.plane.so/) and submit [pull requests](https://github.com/makeplane/docs) to improve it—whether it's fixing typos or adding new content.
-- Talk or write about Plane or any other ecosystem integration and [let us know](https://discord.com/invite/A92xrEGCge)!
-- Show your support by upvoting [popular feature requests](https://github.com/makeplane/plane/issues).
+## 🧑‍💻 Desarrollo con Agentes Especializados
 
-Please read [CONTRIBUTING.md](https://github.com/makeplane/plane/blob/master/CONTRIBUTING.md) for details on the process for submitting pull requests to us.
+Construct.io utiliza un sistema de **agentes especializados** para garantizar calidad y expertise en cada área:
 
-### Repo activity
+### Agentes Disponibles
 
-![Plane Repo Activity](https://repobeats.axiom.co/api/embed/2523c6ed2f77c082b7908c33e2ab208981d76c39.svg "Repobeats analytics image")
+| Agente | Responsabilidad | Cuándo usar |
+|--------|-----------------|-------------|
+| **database-architect** | Diseño de modelos Django, migraciones, queries | Cambios en base de datos, optimización |
+| **fullstack-architect** | Arquitectura general, integración frontend-backend | Decisiones arquitectónicas, features complejas |
+| **ui-specialist** | Componentes React, UX/UI, accesibilidad | Interfaces, diseño, experiencia de usuario |
+| **devops-specialist** | Infraestructura, CI/CD, deployment | Docker, AWS, pipelines, monitoring |
+| **test-specialist** | Testing (unit, integration, E2E) | Escribir tests, debugging, QA |
+| **aec-specialist** | Validación de flujos AEC, terminología | Validar lógica de negocio construcción |
 
-### We couldn't have done this without you.
+### Uso con Claude Code
 
-<a href="https://github.com/makeplane/plane/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=makeplane/plane" />
-</a>
+```bash
+# Implementar feature completa (coordina múltiples agentes)
+/implement Sistema de licitaciones para workstreams
 
-## License
+# Revisar código con agentes apropiados
+/review backend/plane/db/models/workstream.py
 
-This project is licensed under the [GNU Affero General Public License v3.0](https://github.com/makeplane/plane/blob/master/LICENSE.txt).
+# Debug con agente especializado
+/debug Aprobación de deliverable no genera notificación
+
+# Optimizar performance
+/optimize Queries de workstreams para proyectos grandes
+```
+
+**Ver más:** [`.claude/commands/`](.claude/commands/)
+
+---
+
+## 🏗️ Conceptos Clave AEC
+
+### Tenant (Empresa/Profesional)
+
+Cada organización del ecosistema es un **tenant independiente**:
+- ABC Desarrollos (desarrollador)
+- Estudio Arquitectónico XYZ (arquitecto)
+- Ingeniería DEF (ingeniero)
+- Constructora GHI (constructor)
+- Electricista JKL (subcontratista)
+
+Cada tenant tiene sus propios usuarios, proyectos y configuraciones, pero puede colaborar con otros tenants.
+
+### Project (Proyecto Inmobiliario)
+
+Representa un desarrollo inmobiliario completo. Tiene:
+- **Phases:** Etapas del proyecto (Factibilidad, Diseño, Permisos, Construcción, etc.)
+- **Owner Tenant:** El desarrollador que "posee" el proyecto
+- **Collaborating Tenants:** Empresas que participan en el proyecto
+
+### Workstream (Especialización de Trabajo)
+
+Unidad de trabajo asignable a un tenant externo:
+- "Proyecto Estructural" → asignado a Ingeniería DEF
+- "Instalación Eléctrica" → licitación abierta a electricistas
+- "Gestión Municipal" → asignado a Gestor ABC
+
+### Deliverable (Entregable)
+
+Output de un workstream que requiere aprobación:
+- Planos estructurales (v1, v2, v3...)
+- Memoria de cálculo
+- Certificado de obra mensual
+
+Estados: Draft → Submitted → Under Review → Approved / Rejected
+
+### Tender (Licitación)
+
+Proceso de selección de tenant para un workstream:
+1. Desarrollador publica licitación
+2. Múltiples tenants postulan (bids)
+3. Desarrollador evalúa y adjudica
+4. Workstream se asigna al ganador
+
+---
+
+## 📚 Documentación
+
+- **[AEC Brief](docs/AEC_Brief.md):** Referencia completa de flujos de construcción
+- **[Master Plan](.claude/master-plan.md):** Lineamientos técnicos y arquitectura
+- **[API Documentation](docs/API.md):** Endpoints REST y ejemplos
+- **[Architecture Guide](docs/ARCHITECTURE.md):** Decisiones técnicas y patrones
+- **[Deployment Guide](docs/DEPLOYMENT.md):** Guía de despliegue a producción
+
+---
+
+## 🧪 Testing
+
+```bash
+# Backend tests
+cd apiserver
+pytest --cov=plane --cov-report=html
+
+# Frontend tests
+cd web
+npm run test
+
+# E2E tests (Playwright)
+cd web
+npm run test:e2e
+
+# Linting
+npm run lint
+python manage.py check
+```
+
+**Cobertura objetivo:** >85% (unit + integration)
+
+---
+
+## 🚢 Deployment
+
+### Staging
+
+```bash
+git push origin develop
+# GitHub Actions despliega automáticamente a staging
+```
+
+### Production
+
+```bash
+git push origin main
+# Requiere aprobación manual en GitHub Actions
+```
+
+**Ver:** [Deployment Guide](docs/DEPLOYMENT.md)
+
+---
+
+## 🤝 Contribución
+
+### Workflow
+
+1. **Fork** el repositorio
+2. **Crear branch** desde `develop`: `git checkout -b feature/nueva-funcionalidad`
+3. **Implementar** siguiendo los estándares del proyecto
+4. **Testear** (cobertura >85%)
+5. **Commit** siguiendo [Conventional Commits](https://www.conventionalcommits.org/)
+6. **Push** y crear **Pull Request** a `develop`
+
+### Estándares de Código
+
+**Backend (Python/Django):**
+- PEP 8 (black formatter)
+- Type hints (Python 3.11+)
+- Docstrings en funciones públicas
+- Tests con pytest
+
+**Frontend (TypeScript/React):**
+- ESLint + Prettier
+- TypeScript strict mode
+- Componentes funcionales con hooks
+- Tests con Jest + RTL
+
+### Commits
+
+```bash
+# Formato: <type>(<scope>): <subject>
+
+feat(workstream): add tender bidding process
+fix(deliverable): resolve approval notification bug
+docs(aec): update phase transition documentation
+test(tenant): add collaboration tests
+```
+
+**Tipos:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+
+---
+
+## 🐛 Reportar Issues
+
+Usar [GitHub Issues](https://github.com/tu-org/constructio/issues) con template:
+
+```markdown
+### Descripción
+[Descripción clara del problema]
+
+### Pasos para Reproducir
+1. Ir a...
+2. Hacer click en...
+3. Ver error...
+
+### Comportamiento Esperado
+[Qué debería pasar]
+
+### Comportamiento Actual
+[Qué está pasando]
+
+### Contexto
+- Tenant: [tipo de empresa]
+- Fase: [fase del proyecto]
+- Browser/OS: [si aplica]
+
+### Screenshots
+[Si es posible]
+```
+
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo licencia **[AGPL-3.0](LICENSE)** (heredada de Plane.so).
+
+El código base de Plane.so está licenciado bajo AGPL-3.0 por [Plane.so](https://github.com/makeplane/plane).
+
+Las extensiones AEC específicas de Construct.io están bajo la misma licencia.
+
+---
+
+## 🙏 Agradecimientos
+
+- **[Plane.so](https://plane.so)** - Por la excelente base arquitectónica
+- Comunidad AEC Argentina - Por feedback y validación de flujos
+- Desarrolladores y contribuidores del proyecto
+
+---
+
+## 📞 Contacto
+
+- **Documentación:** [docs/](docs/)
+- **Issues:** [GitHub Issues](https://github.com/tu-org/constructio/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/tu-org/constructio/discussions)
+
+---
+
+## 🗺️ Roadmap
+
+### ✅ Fase 1: MVP Base (Q4 2025)
+- [x] Fork y setup inicial
+- [ ] Modelo multi-tenant básico
+- [ ] Gestión de fases de proyecto
+- [ ] Asignación de workstreams
+- [ ] Aprobación de deliverables
+- [ ] Gestión documental básica
+
+### 🚧 Fase 2: Licitaciones (Q1 2026)
+- [ ] Sistema de tender/bidding
+- [ ] Comparación de propuestas
+- [ ] Adjudicación automática
+- [ ] Notificaciones de licitaciones
+
+### 🔮 Fase 3: Avanzado (Q2 2026)
+- [ ] Integración con AutoCAD/Revit (BIM)
+- [ ] Métricas y analytics avanzados
+- [ ] Mobile app (iOS/Android)
+- [ ] Integración con ERP construcción
+
+### 🌟 Fase 4: Escalamiento (Q3 2026)
+- [ ] WhatsApp Business API
+- [ ] Gestión de certificados y facturación
+- [ ] Marketplace de proveedores
+- [ ] IA para estimación de costos
+
+---
+
+**Versión:** 0.1.0-alpha  
+**Basado en:** Plane.so v0.17  
+**Última actualización:** Octubre 2025

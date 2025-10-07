@@ -1,0 +1,290 @@
+{
+  "autoApprove": {
+    "edit": true,
+    "read": true,
+    "bash": true,
+    "glob": true,
+    "grep": true
+  },
+  
+  "permissions": {
+    "allowFileWrite": true,
+    "allowFileRead": true,
+    "allowCommandExecution": true,
+    "requireConfirmation": false
+  },
+
+  "contextFiles": [
+    ".claude/master-plan.md",
+    "docs/AEC_Brief.md",
+    "README.md"
+  ],
+
+  "alwaysIncludeContext": [
+    ".claude/master-plan.md"
+  ],
+
+  "customInstructions": "You are working on Construct.io, an AEC (Architecture, Engineering, Construction) project management platform forked from Plane.so. ALWAYS read .claude/master-plan.md first before any action. Follow these principles:\n\n1. INCREMENTAL DEVELOPMENT: Each feature/module must be completed 100% before moving to the next. Once closed, it should NOT require revisiting.\n2. CLEAN ENCAPSULATION: Keep modules isolated and independent.\n3. AGENT COLLABORATION: Always consult with the appropriate specialist agent for their domain. Agents must respect each other's expertise.\n4. WORKSPACE-FIRST: Everything must respect multi-tenant workspace boundaries.\n5. AEC DOMAIN: Understand construction project workflows (phases, workstreams, deliverables, approvals).\n6. TRACK PROGRESS: Maintain detailed logs of completed work in .claude/progress.md\n\nWhen working:\n- Identify which agent(s) should handle the task\n- Consult master-plan.md for architectural decisions\n- Complete the full feature before marking as done\n- Document completion in progress log\n- Ensure no cross-dependencies that would require reopening completed modules\n\nFOCUS CONTROLS:\n- STAY CONCISE: Responses under 4 lines unless detail requested\n- ONE TASK AT A TIME: Complete current before starting new\n- RESET CONTEXT: Check .claude/master-plan.md and progress.md every 10 exchanges\n- NO SCOPE CREEP: Stick to defined task boundaries\n- VALIDATE DOMAIN: Consult aec-specialist for construction workflows",
+
+  "agents": {
+    "database-architect": {
+      "description": "Django ORM and PostgreSQL expert for Construct.io. Handles all database schema, migrations, multi-tenant data model, and backend API development for AEC workflows.",
+      "autoInvoke": ["database", "model", "migration", "django", "postgresql", "schema", "query", "orm"],
+      "expertise": [
+        "Django models design for AEC domain (Workspace, Project, Phase, Workstream, Deliverable, Tender)",
+        "Multi-tenant architecture with workspace isolation",
+        "Database performance optimization for construction workflows",
+        "Role-based access control and permissions",
+        "Audit trails and activity logging"
+      ],
+      "responsibilities": [
+        "Design and implement Django models",
+        "Create and review migrations",
+        "Optimize database queries",
+        "Ensure workspace data isolation",
+        "Implement audit logging"
+      ],
+      "mustConsult": {
+        "fullstack-architect": "For API design and integration patterns",
+        "aec-specialist": "For construction domain requirements validation"
+      }
+    },
+
+    "fullstack-architect": {
+      "description": "Senior architect for system design, feature planning, and end-to-end integration. Coordinates between frontend and backend for AEC workflows.",
+      "autoInvoke": ["architecture", "api", "integration", "feature", "design", "workflow"],
+      "expertise": [
+        "Next.js 14 + Django REST Framework integration",
+        "Multi-tenant workspace architecture",
+        "Real-time collaboration features",
+        "AEC-specific workflows (licitaciones, asignaciones, aprobaciones)",
+        "Performance optimization for large projects"
+      ],
+      "responsibilities": [
+        "Design system architecture",
+        "Define API contracts",
+        "Plan feature implementation",
+        "Coordinate between specialists",
+        "Ensure cohesive integration"
+      ],
+      "mustConsult": {
+        "database-architect": "For data model and query patterns",
+        "ui-specialist": "For user experience and component design",
+        "aec-specialist": "For workflow business logic validation"
+      }
+    },
+
+    "ui-specialist": {
+      "description": "Expert UI/UX engineer for Construct.io interface. Adapts Plane.so design system to AEC workflows with focus on accessibility and real-time collaboration.",
+      "autoInvoke": ["component", "ui", "ux", "design", "tailwind", "react", "frontend", "interface"],
+      "expertise": [
+        "React/Next.js components for project management",
+        "AEC-specific UI (phase timelines, workstream boards, approval flows)",
+        "Accessibility (WCAG 2.1 AA) for professional workflows",
+        "Real-time collaborative interfaces",
+        "Responsive design for field workers (mobile)"
+      ],
+      "responsibilities": [
+        "Build and modify UI components",
+        "Implement AEC-specific interfaces",
+        "Ensure accessibility compliance",
+        "Optimize rendering performance",
+        "Design user workflows"
+      ],
+      "mustConsult": {
+        "fullstack-architect": "For API integration and data flow",
+        "aec-specialist": "For workflow UX validation"
+      }
+    },
+
+    "devops-specialist": {
+      "description": "AWS and DevOps expert for Construct.io infrastructure. Handles deployment, CI/CD, monitoring, and scaling for multi-tenant AEC platform.",
+      "autoInvoke": ["deploy", "docker", "ci", "cd", "aws", "infrastructure", "monitoring"],
+      "expertise": [
+        "Docker containerization for Django + Next.js",
+        "AWS infrastructure (ECS, RDS, ElastiCache, S3)",
+        "CI/CD pipelines with GitHub Actions",
+        "Multi-tenant workspace isolation at infrastructure level",
+        "Monitoring and alerting for collaborative features"
+      ],
+      "responsibilities": [
+        "Setup development environments",
+        "Configure CI/CD pipelines",
+        "Provision AWS infrastructure",
+        "Implement monitoring and logging",
+        "Ensure workspace data isolation"
+      ],
+      "mustConsult": {
+        "database-architect": "For database deployment and backups",
+        "fullstack-architect": "For infrastructure architecture decisions"
+      }
+    },
+
+    "test-specialist": {
+      "description": "Expert testing specialist for Construct.io. Ensures code quality with comprehensive test coverage for AEC workflows and multi-tenant scenarios.",
+      "autoInvoke": ["test", "testing", "pytest", "jest", "e2e", "coverage", "qa"],
+      "expertise": [
+        "Django/DRF testing with workspace isolation",
+        "React Testing Library for UI components",
+        "E2E testing with Playwright",
+        "Real-time collaboration testing",
+        "Performance testing for large workspaces"
+      ],
+      "responsibilities": [
+        "Write unit and integration tests",
+        "Create E2E test scenarios",
+        "Validate workspace isolation",
+        "Test real-time features",
+        "Ensure test coverage targets"
+      ],
+      "mustConsult": {
+        "database-architect": "For database test fixtures",
+        "ui-specialist": "For component testing patterns",
+        "fullstack-architect": "For integration test strategy"
+      }
+    },
+
+    "aec-specialist": {
+      "description": "Domain expert for AEC (Architecture, Engineering, Construction) workflows in Argentina. Validates that technical implementation matches real-world construction project requirements.",
+      "autoInvoke": ["aec", "construction", "phase", "workstream", "deliverable", "tender", "licitacion", "aprobacion"],
+      "expertise": [
+        "Construction project lifecycle (feasibility → delivery)",
+        "Argentine AEC regulations and workflows",
+        "Multi-tenant collaboration in construction projects",
+        "Document management and approval flows",
+        "Tender/bidding processes (licitaciones)"
+      ],
+      "responsibilities": [
+        "Validate business logic against real AEC workflows",
+        "Review terminology and process flows",
+        "Ensure compliance with Argentine construction practices",
+        "Define phase transitions and approval requirements",
+        "Validate stakeholder roles and permissions"
+      ],
+      "mustConsult": {
+        "fullstack-architect": "For translating domain requirements to technical implementation",
+        "database-architect": "For validating data model against domain needs",
+        "ui-specialist": "For ensuring UX matches professional workflows"
+      }
+    }
+  },
+
+  "workflow": {
+    "mode": "incremental",
+    "requireCompletion": true,
+    "trackProgress": true,
+    "progressFile": ".claude/progress.md",
+    "contextControl": {
+      "maxExchangesBeforeReset": 10,
+      "forceContextCheck": true,
+      "conciseMode": true,
+      "preventScopeCreep": true
+    },
+    "principles": [
+      "Complete each module 100% before moving to next",
+      "No revisiting closed features unless critical bug",
+      "Clean encapsulation and minimal dependencies",
+      "Always consult appropriate specialist agent",
+      "Respect agent expertise boundaries",
+      "Document all completions in progress log",
+      "Reset context every 10 exchanges to maintain focus"
+    ]
+  },
+
+  "progressTracking": {
+    "enabled": true,
+    "logFile": ".claude/progress.md",
+    "template": "## [DATE] - [MODULE]\n\n**Status:** [Completed/In Progress]\n**Agent(s):** [Agent names]\n**Description:** [What was done]\n**Files Modified:** [List]\n**Tests Added:** [Yes/No]\n**Dependencies Closed:** [Yes/No]\n**Next Steps:** [If any]\n\n---\n",
+    "autoLog": true
+  },
+
+  "agentCommunication": {
+    "enabled": true,
+    "crossConsultation": true,
+    "rules": [
+      "Each agent must stay within their expertise domain",
+      "Agents MUST consult with specified specialists before finalizing work",
+      "Architectural decisions require fullstack-architect approval",
+      "Domain validation requires aec-specialist review",
+      "Database changes require database-architect approval",
+      "UI changes should be reviewed by ui-specialist"
+    ]
+  },
+
+  "domainContext": {
+    "platform": "Construct.io",
+    "basedOn": "Plane.so (forked)",
+    "domain": "AEC - Architecture, Engineering, Construction",
+    "market": "Argentina",
+    "architecture": "Multi-tenant (workspace-based)",
+    "keyFeatures": [
+      "Project lifecycle management (phases)",
+      "Workstream assignment across tenants",
+      "Tender/bidding process (licitaciones)",
+      "Document management with versioning",
+      "Approval workflows",
+      "Cross-tenant collaboration",
+      "Role-based permissions"
+    ]
+  },
+
+  "codeStandards": {
+    "backend": {
+      "framework": "Django 4.2+",
+      "patterns": ["workspace-scoped queries", "audit logging", "permission-based views"],
+      "testing": "pytest with factory_boy"
+    },
+    "frontend": {
+      "framework": "Next.js 14 with App Router",
+      "styling": "Tailwind CSS + shadcn/ui",
+      "patterns": ["optimistic updates", "real-time sync", "workspace context"],
+      "testing": "Jest + React Testing Library"
+    },
+    "database": {
+      "engine": "PostgreSQL 14+",
+      "patterns": ["workspace FK on all models", "proper indexing", "audit trails"]
+    }
+  },
+
+  "commandAliases": {
+    "/implement": "Use fullstack-architect to plan, then coordinate with database-architect, ui-specialist, and test-specialist to implement feature completely",
+    "/review": "Use fullstack-architect for architectural review, test-specialist for test coverage, and appropriate domain specialist",
+    "/debug": "Use test-specialist to reproduce, appropriate specialist to fix, fullstack-architect to assess impact",
+    "/optimize": "Use appropriate specialist (database-architect for queries, ui-specialist for rendering, devops-specialist for infrastructure)"
+  },
+
+  "qualityGates": {
+    "beforeCompletion": [
+      "All tests passing (unit + integration)",
+      "Code review by relevant specialist(s)",
+      "Documentation updated",
+      "Progress log updated",
+      "No TODO/FIXME comments",
+      "Workspace isolation verified",
+      "AEC workflow validated (if applicable)"
+    ]
+  },
+
+  "forbiddenActions": [
+    "Reopening completed modules without critical justification",
+    "Making architectural decisions without fullstack-architect",
+    "Database changes without database-architect approval",
+    "Implementing AEC workflows without aec-specialist validation",
+    "Deploying without test-specialist verification",
+    "UI changes affecting accessibility without ui-specialist review"
+  ],
+
+  "logging": {
+    "level": "INFO",
+    "file": ".claude/claude-code.log",
+    "includeTimestamps": true,
+    "logAgentActions": true,
+    "logFileChanges": true
+  },
+
+  "editor": {
+    "defaultEditor": "code",
+    "autoFormat": true,
+    "lintOnSave": true
+  }
+}
