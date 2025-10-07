@@ -99,3 +99,22 @@ dev-editor
 *.rdb.gz
 
 storybook-static
+
+# Claude Code
+.claude/claude-code.log
+.claude/*.log
+
+# Environment
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Development
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+node_modules/
+.next/
