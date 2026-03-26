@@ -1,0 +1,199 @@
+// Partial unique indexes (one MAIN per thread, one APTO per thread, one current version per document)
+// are defined in SQL in prisma/migrations/*_init/migration.sql (not expressible in Prisma schema alone).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPERADMIN
+  COMPANY_ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ProjectRole {
+  ARQUITECTURA
+  DDO
+  ASESOR
+  DESARROLLADOR
+}
+
+enum DocumentType {
+  MAIN
+  SECONDARY
+}
+
+enum VersionStatus {
+  DRAFT
+  APTO
+  SUPERSEDED
+}
+
+enum ThreadStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum RfiStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+
+  users          User[]
+  projectLinks   ProjectCompany[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  email        String   @unique
+  name         String
+  passwordHash String?
+  companyId    String
+  role         UserRole @default(MEMBER)
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  auditLogs AuditLog[]
+  comments  Comment[]
+  rfis      RFI[]
+}
+
+model Project {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String
+
+  companies ProjectCompany[]
+  threads   Thread[]
+}
+
+model ProjectCompany {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  projectId String
+  companyId String
+  role      ProjectRole
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, companyId])
+}
+
+model Thread {
+  id         String       @id @default(uuid())
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  projectId  String
+  discipline String
+  level      String
+  typology   String
+  status     ThreadStatus @default(ACTIVE)
+
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  documents        Document[]
+  documentVersions DocumentVersion[]
+  comments         Comment[]
+  rfis             RFI[]
+
+  @@unique([projectId, discipline, level, typology])
+}
+
+model Document {
+  id        String       @id @default(uuid())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  threadId  String
+  type      DocumentType
+
+  thread   Thread            @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  versions DocumentVersion[]
+
+  @@index([threadId])
+  @@index([threadId, type])
+}
+
+/// threadId is denormalized from Document.thread for DB-level "one APTO per thread" enforcement.
+model DocumentVersion {
+  id            String        @id @default(uuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  documentId    String
+  threadId      String
+  versionNumber Int
+  fileUrl       String
+  status        VersionStatus @default(DRAFT)
+  isCurrent     Boolean       @default(false)
+
+  document Document  @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  thread   Thread    @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  comments Comment[]
+
+  @@unique([documentId, versionNumber])
+  @@index([threadId])
+}
+
+model Comment {
+  id                String   @id @default(uuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  threadId          String
+  documentVersionId String?
+  userId            String
+  body              String
+
+  thread          Thread           @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  documentVersion DocumentVersion? @relation(fields: [documentVersionId], references: [id], onDelete: Restrict)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([threadId])
+  @@index([documentVersionId])
+}
+
+model RFI {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  threadId    String
+  createdById String
+  title       String
+  description String?
+  status      RfiStatus @default(OPEN)
+
+  thread    Thread @relation(fields: [threadId], references: [id], onDelete: Restrict)
+  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([threadId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+}

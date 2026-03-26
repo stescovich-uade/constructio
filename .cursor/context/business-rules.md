@@ -1,5 +1,0 @@
-- 1 APTO por thread
-- No rollback
-- Aprobación total
-- Versionado lineal
-- No delete → SUPERADO
