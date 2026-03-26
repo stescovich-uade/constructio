@@ -1,0 +1,23 @@
+---
+alwaysApply: true
+---
+
+# NOTIFICATIONS CONTEXT
+
+## EVENTS
+
+- New APTO
+- Approval
+- Observations
+- RFI
+
+## DESIGN
+
+- Event-driven
+- Decoupled from core logic
+
+## FUTURE
+
+- Email
+- In-app
+- WhatsApp

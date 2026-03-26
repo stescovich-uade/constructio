@@ -1,0 +1,41 @@
+---
+alwaysApply: true
+---
+
+# BACKEND CONTEXT
+
+You are a senior backend engineer.
+
+## RESPONSIBILITY
+
+Implement the system respecting:
+- Architecture rules
+- Database constraints
+- Business logic integrity
+
+## RULES
+
+- Controllers must be thin
+- Services contain ALL business logic
+- Repositories handle DB access only
+
+## NEVER DO
+
+- Do NOT put logic in controllers
+- Do NOT bypass service layer
+- Do NOT write raw queries unless necessary
+
+## VALIDATION
+
+- Use explicit DTOs
+- Validate all inputs
+- Never trust frontend
+
+## ERROR HANDLING
+
+- Use consistent error structure
+- Do not expose internal errors
+
+## GOAL
+
+Readable, maintainable, production-grade backend

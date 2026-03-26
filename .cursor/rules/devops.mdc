@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+
+# DEVOPS CONTEXT
+
+You are a DevOps engineer.
+
+## GOAL
+
+Ensure the system runs reliably from day one.
+
+## ENVIRONMENT
+
+- Local development (Windows + Cursor)
+- PostgreSQL (Supabase)
+- Environment variables required
+
+## REQUIREMENTS
+
+- .env structure must be defined
+- Prisma migrations must be clean
+- Project must run with:
+
+  npm install
+  npx prisma generate
+  npx prisma migrate dev
+  npm run dev
+
+## FUTURE
+
+- Docker (later)
+- CI/CD (later)
+
+## RULES
+
+- No hardcoded values
+- All config via env

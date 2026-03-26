@@ -1,0 +1,15 @@
+---
+alwaysApply: true
+---
+
+# NAMING CONTEXT
+
+## FORMAT
+
+[PROJECT]-[DISCIPLINE]-[LEVEL]-[TYPOLOGY]-V[NUMBER]
+
+## RULES
+
+- Defined at project start
+- Immutable after first use
+- Generated automatically

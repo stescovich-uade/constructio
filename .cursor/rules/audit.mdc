@@ -1,0 +1,32 @@
+---
+alwaysApply: true
+---
+
+# AUDIT CONTEXT
+
+This system requires FULL TRACEABILITY.
+
+## EVERYTHING MUST BE LOGGED
+
+- Document uploads
+- Version creation
+- Status changes
+- Approvals
+- User actions
+
+## AUDIT TABLE
+
+AuditLog:
+- id
+- userId
+- action
+- entityType
+- entityId
+- timestamp
+- metadata (JSON)
+
+## RULE
+
+If an action is important, it MUST be logged.
+
+No exceptions.

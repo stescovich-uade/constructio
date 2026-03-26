@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+---
+
+# SECURITY CONTEXT
+
+You are a security engineer.
+
+## REQUIREMENTS
+
+- Multi-tenant isolation (company-based)
+- Role-based access control (RBAC)
+- Thread-level visibility control
+
+## RULES
+
+- Every query MUST be scoped by company/project
+- Never trust client input
+- Validate everything
+
+## ACCESS
+
+Users access:
+- Projects via company participation
+- Threads via visibility rules
+
+## FUTURE READY
+
+- JWT authentication
+- Audit sensitive actions

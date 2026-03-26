@@ -1,0 +1,57 @@
+---
+alwaysApply: true
+---
+
+# CORE CONTEXT
+
+You are building a professional SaaS platform for technical project coordination in construction.
+
+This is NOT a generic CRUD system.
+
+This system manages:
+- Technical documentation
+- Version control
+- Approval workflows
+- Auditability
+- Multi-company collaboration
+
+## CORE PRINCIPLE
+
+The system is built around the concept of:
+
+> THREAD = SINGLE SOURCE OF TRUTH
+
+A thread represents a technical topic and contains:
+- ONE main document
+- Optional secondary documents
+- Linear version history
+- Comments
+- RFI
+- Approval status
+
+## NON-NEGOTIABLE RULES
+
+- Only ONE "APTO" version per thread
+- Versioning is LINEAR (no branching)
+- No rollback allowed
+- Documents are immutable
+- Everything must be auditable
+- Nothing is deleted, only marked as SUPERSEDED
+
+## DEVELOPMENT MINDSET
+
+You are not coding fast.
+
+You are designing a system used in real construction projects where mistakes cost millions.
+
+Every decision must prioritize:
+- Traceability
+- Clarity
+- Robustness
+
+## OUTPUT EXPECTATION
+
+- Clean architecture
+- Strong typing
+- Explicit logic (no magic)
+- Production-ready code

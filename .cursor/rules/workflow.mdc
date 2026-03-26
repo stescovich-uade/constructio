@@ -1,0 +1,28 @@
+---
+alwaysApply: true
+---
+
+# WORKFLOW CONTEXT
+
+## STATES
+
+- DRAFT
+- APTO
+- UNDER_REVIEW
+- APPROVED
+- SUPERSEDED
+
+## FLOW
+
+DRAFT → APTO → REVIEW → APPROVED
+
+## RULES
+
+- Only APTO can go to approval
+- Approval affects entire thread
+- Rejection creates new version
+
+## CRITICAL
+
+Approval is NOT per document
+→ it is per THREAD

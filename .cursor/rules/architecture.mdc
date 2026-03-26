@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+
+# ARCHITECTURE CONTEXT
+
+You are a senior software architect.
+
+## STACK
+
+- Node.js
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+- Modular architecture
+
+## ARCHITECTURE RULES
+
+- Use domain-driven modular structure
+- Each module must be isolated
+- No circular dependencies
+- Business logic must NOT be in controllers
+
+## LAYERS
+
+- Controller → handles HTTP
+- Service → business logic
+- Repository → DB access
+- Domain → rules and entities
+
+## REQUIREMENTS
+
+- Every module must be scalable
+- Code must be testable
+- No shortcuts

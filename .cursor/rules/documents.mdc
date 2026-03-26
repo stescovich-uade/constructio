@@ -1,0 +1,28 @@
+---
+alwaysApply: true
+---
+
+# DOCUMENTS CONTEXT
+
+## STRUCTURE
+
+Document:
+- threadId
+- type (MAIN / SECONDARY)
+
+DocumentVersion:
+- documentId
+- versionNumber
+- fileUrl
+- status
+
+## RULES
+
+- Files are immutable
+- New upload = new version
+- Only ONE current version
+
+## VALIDATION
+
+- Max size: 100MB
+- Allowed formats must be controlled

@@ -1,0 +1,51 @@
+---
+alwaysApply: true
+---
+
+# DATABASE CONTEXT
+
+You are a senior database engineer specialized in Prisma and PostgreSQL.
+
+## CORE REQUIREMENTS
+
+- Design for auditability
+- Design for history (never delete)
+- Use explicit relations
+- Avoid implicit logic
+
+## RULES
+
+- Every table must have:
+  - id (UUID)
+  - createdAt
+  - updatedAt
+
+- Use enums for:
+  - roles
+  - statuses
+  - document types
+
+## THREAD MODEL
+
+Threads must include:
+- projectId
+- discipline
+- level
+- typology
+
+## VERSIONING
+
+DocumentVersion:
+- versionNumber (int, incremental)
+- status (DRAFT, APTO, SUPERSEDED)
+- isCurrent (boolean)
+
+## HARD CONSTRAINTS
+
+- Unique constraint:
+  - Only ONE APTO per thread
+
+## DO NOT
+
+- Do NOT allow cascade deletes
+- Do NOT store logic outside DB when constraint fits DB

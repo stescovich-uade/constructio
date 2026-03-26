@@ -1,0 +1,31 @@
+---
+alwaysApply: true
+---
+
+# THREAD CONTEXT
+
+Thread is the core entity.
+
+## STRUCTURE
+
+Thread:
+- belongs to Project
+- has Discipline
+- has Level
+- has Typology
+
+## RULES
+
+- A thread represents ONE technical topic
+- Cannot be duplicated with same attributes
+
+## UNIQUE CONSTRAINT
+
+(projectId + discipline + level + typology)
+
+## PURPOSE
+
+Acts as:
+- container
+- approval unit
+- traceability unit

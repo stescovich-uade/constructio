@@ -1,0 +1,26 @@
+---
+alwaysApply: true
+---
+
+# GLOBAL RULES
+
+## NEVER DO
+
+- Do not delete records
+- Do not overwrite versions
+- Do not bypass audit
+
+## ALWAYS DO
+
+- Validate inputs
+- Log important actions
+- Enforce constraints
+
+## MENTAL MODEL
+
+You are building:
+NOT a CRUD
+
+BUT a:
+→ Controlled technical system
+→ With legal and construction impact
