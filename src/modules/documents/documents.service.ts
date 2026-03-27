@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { DocumentType, Prisma, VersionStatus } from "@prisma/client";
+import { DocumentStatus, DocumentType, Prisma, ReviewStatus } from "@prisma/client";
 import type { Document, DocumentVersion } from "@prisma/client";
 import { prisma } from "../../core/database/prisma.js";
 import { HttpError } from "../../core/errors/http-error.js";
@@ -21,6 +21,8 @@ export type CreateVersionParams = {
   documentId: string;
   fileUrl: string;
 };
+
+export type ReviewDecision = "APPROVED" | "REJECTED";
 
 function getErrorMessageDeep(error: unknown): string {
   if (error instanceof Error) {
@@ -45,7 +47,56 @@ function mapPromoteVersionDbError(error: unknown): HttpError | null {
   if (message.includes("User not authorized")) {
     return new HttpError(403, "User not authorized for this project");
   }
+  if (message.includes("Can only promote to APTO from UNDER_REVIEW")) {
+    return new HttpError(409, "Version must be UNDER_REVIEW to promote to APTO");
+  }
+  if (message.includes("no reviews assigned")) {
+    return new HttpError(409, "Cannot promote to APTO: no reviews assigned");
+  }
+  if (message.includes("not all reviews approved")) {
+    return new HttpError(409, "Cannot promote to APTO: not all reviews approved");
+  }
+  if (message.includes("fileUrl cannot change after submission")) {
+    return new HttpError(409, "Document version file cannot be changed after submission");
+  }
   return null;
+}
+
+async function promoteVersionToAptoInTx(
+  documentVersionId: string,
+  userId: string,
+  tx: Prisma.TransactionClient,
+): Promise<void> {
+  const version = await documentsRepository.findVersionById(documentVersionId, tx);
+  if (!version) {
+    throw new HttpError(404, "DocumentVersion not found");
+  }
+
+  if (version.threadId !== version.document.threadId) {
+    throw new HttpError(409, "DocumentVersion threadId does not match parent document");
+  }
+
+  const projectId = version.document.thread.projectId;
+  await assertUserInProject(userId, projectId, tx);
+
+  await tx.$executeRaw(
+    Prisma.sql`SELECT promote_version_to_apto(${documentVersionId}, ${userId})`,
+  );
+
+  await auditService.log(
+    {
+      userId,
+      action: AUDIT_ACTIONS.DOCUMENT_VERSION_PROMOTED_TO_APTO,
+      entityType: ENTITY_TYPES.DocumentVersion,
+      entityId: documentVersionId,
+      metadata: {
+        projectId,
+        threadId: version.threadId,
+        documentId: version.documentId,
+      },
+    },
+    tx,
+  );
 }
 
 export const documentsService = {
@@ -118,8 +169,8 @@ export const documentsService = {
         const nextNumber = maxVersion + 1;
 
         await tx.documentVersion.updateMany({
-          where: { documentId: params.documentId, status: VersionStatus.APTO },
-          data: { status: VersionStatus.SUPERSEDED, isCurrent: false },
+          where: { documentId: params.documentId, status: DocumentStatus.APTO },
+          data: { status: DocumentStatus.SUPERSEDED, isCurrent: false },
         });
 
         await documentsRepository.clearCurrentForDocument(params.documentId, tx);
@@ -157,6 +208,10 @@ export const documentsService = {
       if (error instanceof HttpError) {
         throw error;
       }
+      const mapped = mapPromoteVersionDbError(error);
+      if (mapped) {
+        throw mapped;
+      }
       if (isPrismaUniqueViolation(error)) {
         throw new HttpError(409, "Version numbering or current-version constraint violated");
       }
@@ -165,42 +220,177 @@ export const documentsService = {
   },
 
   /**
-   * Promotes a version to APTO. Mutation is delegated to PostgreSQL promote_version_to_apto();
-   * this service keeps authorization, audit, and pre-checks only.
+   * DRAFT → SUBMITTED. Locks content editing at the database for SUBMITTED and later states.
    */
-  async promoteVersionToApto(documentVersionId: string, userId: string): Promise<void> {
+  async submitVersion(documentVersionId: string, userId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      const version = await documentsRepository.findVersionById(documentVersionId, tx);
+      if (!version) {
+        throw new HttpError(404, "DocumentVersion not found");
+      }
+
+      const projectId = version.document.thread.projectId;
+      await assertUserInProject(userId, projectId, tx);
+
+      if (version.status !== DocumentStatus.DRAFT) {
+        throw new HttpError(409, "Only DRAFT versions can be submitted");
+      }
+
+      await tx.documentVersion.update({
+        where: { id: documentVersionId },
+        data: { status: DocumentStatus.SUBMITTED },
+      });
+    });
+  },
+
+  /**
+   * Registers a reviewer. Moves SUBMITTED → UNDER_REVIEW when the first reviewer is added.
+   * `userId` is the reviewer. When `assignedByUserId` is omitted, the reviewer is treated as the caller (both must be in the project).
+   */
+  async assignReviewer(
+    documentVersionId: string,
+    userId: string,
+    assignedByUserId?: string,
+  ): Promise<void> {
+    const assignerId = assignedByUserId ?? userId;
     try {
-      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await prisma.$transaction(async (tx) => {
         const version = await documentsRepository.findVersionById(documentVersionId, tx);
         if (!version) {
           throw new HttpError(404, "DocumentVersion not found");
         }
 
-        if (version.threadId !== version.document.threadId) {
-          throw new HttpError(409, "DocumentVersion threadId does not match parent document");
+        const projectId = version.document.thread.projectId;
+        await assertUserInProject(assignerId, projectId, tx);
+        await assertUserInProject(userId, projectId, tx);
+
+        if (version.status !== DocumentStatus.SUBMITTED && version.status !== DocumentStatus.UNDER_REVIEW) {
+          throw new HttpError(409, "Reviewers can only be assigned for SUBMITTED or UNDER_REVIEW versions");
+        }
+
+        const existing = await tx.review.findUnique({
+          where: {
+            documentVersionId_reviewerId: { documentVersionId, reviewerId: userId },
+          },
+        });
+        if (existing) {
+          throw new HttpError(409, "Reviewer already assigned to this version");
+        }
+
+        await tx.review.create({
+          data: {
+            id: randomUUID(),
+            documentVersionId,
+            reviewerId: userId,
+            status: ReviewStatus.PENDING,
+          },
+        });
+
+        if (version.status === DocumentStatus.SUBMITTED) {
+          await tx.documentVersion.update({
+            where: { id: documentVersionId },
+            data: { status: DocumentStatus.UNDER_REVIEW },
+          });
+        }
+      });
+    } catch (error: unknown) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      if (isPrismaUniqueViolation(error)) {
+        throw new HttpError(409, "Reviewer already assigned to this version");
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Reviewer records a decision. Any REJECTED review sets the version to REJECTED.
+   * When every review is APPROVED, promotes to APTO via promote_version_to_apto.
+   */
+  async reviewVersion(
+    documentVersionId: string,
+    reviewerId: string,
+    decision: ReviewDecision,
+    comment: string | null | undefined,
+  ): Promise<void> {
+    const trimmedComment = comment?.trim() ?? "";
+    if (decision === "REJECTED" && trimmedComment.length === 0) {
+      throw new HttpError(400, "comment is required when rejecting");
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const version = await documentsRepository.findVersionByIdWithReviews(documentVersionId, tx);
+        if (!version) {
+          throw new HttpError(404, "DocumentVersion not found");
         }
 
         const projectId = version.document.thread.projectId;
-        await assertUserInProject(userId, projectId, tx);
+        await assertUserInProject(reviewerId, projectId, tx);
 
-        await tx.$executeRaw(
-          Prisma.sql`SELECT promote_version_to_apto(${documentVersionId}, ${userId})`,
-        );
+        if (version.status !== DocumentStatus.UNDER_REVIEW) {
+          throw new HttpError(409, "Reviews are only accepted while the version is UNDER_REVIEW");
+        }
 
-        await auditService.log(
-          {
-            userId,
-            action: AUDIT_ACTIONS.DOCUMENT_VERSION_PROMOTED_TO_APTO,
-            entityType: ENTITY_TYPES.DocumentVersion,
-            entityId: documentVersionId,
-            metadata: {
-              projectId,
-              threadId: version.threadId,
-              documentId: version.documentId,
-            },
+        const review = version.reviews.find((r) => r.reviewerId === reviewerId);
+        if (!review) {
+          throw new HttpError(403, "You are not assigned as a reviewer for this version");
+        }
+        if (review.status !== ReviewStatus.PENDING) {
+          throw new HttpError(409, "This review has already been completed");
+        }
+
+        const newReviewStatus = decision === "APPROVED" ? ReviewStatus.APPROVED : ReviewStatus.REJECTED;
+
+        await tx.review.update({
+          where: { id: review.id },
+          data: {
+            status: newReviewStatus,
+            comment: trimmedComment.length > 0 ? trimmedComment : null,
           },
-          tx,
-        );
+        });
+
+        if (decision === "REJECTED") {
+          await tx.documentVersion.update({
+            where: { id: documentVersionId },
+            data: { status: DocumentStatus.REJECTED },
+          });
+          return;
+        }
+
+        const notApproved = await tx.review.count({
+          where: { documentVersionId, status: { not: ReviewStatus.APPROVED } },
+        });
+        if (notApproved > 0) {
+          return;
+        }
+
+        await promoteVersionToAptoInTx(documentVersionId, reviewerId, tx);
+      });
+    } catch (error: unknown) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      const mapped = mapPromoteVersionDbError(error);
+      if (mapped) {
+        throw mapped;
+      }
+      if (isPrismaUniqueViolation(error)) {
+        throw new HttpError(409, "Review constraint violated");
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Promotes a version to APTO. Mutation is delegated to PostgreSQL promote_version_to_apto();
+   * requires UNDER_REVIEW, at least one review, and all reviews APPROVED.
+   */
+  async promoteVersionToApto(documentVersionId: string, userId: string): Promise<void> {
+    try {
+      await prisma.$transaction(async (tx) => {
+        await promoteVersionToAptoInTx(documentVersionId, userId, tx);
       });
     } catch (error: unknown) {
       if (error instanceof HttpError) {

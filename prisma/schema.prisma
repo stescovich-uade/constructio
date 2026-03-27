@@ -29,10 +29,19 @@ enum DocumentType {
   SECONDARY
 }
 
-enum VersionStatus {
+enum DocumentStatus {
   DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  REJECTED
   APTO
   SUPERSEDED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum ThreadStatus {
@@ -70,6 +79,7 @@ model User {
   auditLogs AuditLog[]
   comments  Comment[]
   rfis      RFI[]
+  reviews   Review[]
 }
 
 model Project {
@@ -131,22 +141,39 @@ model Document {
 
 /// threadId is denormalized from Document.thread for DB-level "one APTO per thread" enforcement.
 model DocumentVersion {
-  id            String        @id @default(uuid())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id            String          @id @default(uuid())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
   documentId    String
   threadId      String
   versionNumber Int
   fileUrl       String
-  status        VersionStatus @default(DRAFT)
-  isCurrent     Boolean       @default(false)
+  status        DocumentStatus  @default(DRAFT)
+  isCurrent     Boolean         @default(false)
 
   document Document  @relation(fields: [documentId], references: [id], onDelete: Restrict)
   thread   Thread    @relation(fields: [threadId], references: [id], onDelete: Restrict)
   comments Comment[]
+  reviews  Review[]
 
   @@unique([documentId, versionNumber])
   @@index([threadId])
+}
+
+model Review {
+  id                String       @id @default(uuid())
+  createdAt         DateTime     @default(now())
+  documentVersionId String
+  reviewerId        String
+  status            ReviewStatus @default(PENDING)
+  comment           String?
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  reviewer        User            @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@unique([documentVersionId, reviewerId])
+  @@index([documentVersionId])
+  @@index([reviewerId])
 }
 
 model Comment {

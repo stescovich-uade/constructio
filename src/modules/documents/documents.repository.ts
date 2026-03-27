@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { DocumentType, VersionStatus } from "@prisma/client";
+import { DocumentStatus, DocumentType } from "@prisma/client";
 import { prisma } from "../../core/database/prisma.js";
 
 /**
@@ -59,6 +59,14 @@ export const documentsRepository = {
     });
   },
 
+  async findVersionByIdWithReviews(id: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? prisma;
+    return client.documentVersion.findUnique({
+      where: { id },
+      include: { ...versionWithDocumentAndThread, reviews: true },
+    });
+  },
+
   async getMaxVersionNumber(documentId: string, tx?: Prisma.TransactionClient): Promise<number> {
     const client = tx ?? prisma;
     const agg = await client.documentVersion.aggregate({
@@ -83,7 +91,7 @@ export const documentsRepository = {
         threadId: input.threadId,
         versionNumber: input.versionNumber,
         fileUrl: input.fileUrl,
-        status: VersionStatus.DRAFT,
+        status: DocumentStatus.DRAFT,
         isCurrent: true,
       },
     });
