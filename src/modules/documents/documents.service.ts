@@ -56,8 +56,8 @@ function mapPromoteVersionDbError(error: unknown): HttpError | null {
   if (message.includes("not all reviews approved")) {
     return new HttpError(409, "Cannot promote to APTO: not all reviews approved");
   }
-  if (message.includes("fileUrl cannot change after submission")) {
-    return new HttpError(409, "Document version file cannot be changed after submission");
+  if (message.includes("DocumentVersion locked after submission")) {
+    return new HttpError(409, "Document version is locked after submission");
   }
   return null;
 }
@@ -265,7 +265,10 @@ export const documentsService = {
         await assertUserInProject(userId, projectId, tx);
 
         if (version.status !== DocumentStatus.SUBMITTED && version.status !== DocumentStatus.UNDER_REVIEW) {
-          throw new HttpError(409, "Reviewers can only be assigned for SUBMITTED or UNDER_REVIEW versions");
+          throw new HttpError(
+            409,
+            "Reviewers can only be assigned when the version is SUBMITTED or UNDER_REVIEW",
+          );
         }
 
         const existing = await tx.review.findUnique({
@@ -329,6 +332,9 @@ export const documentsService = {
         const projectId = version.document.thread.projectId;
         await assertUserInProject(reviewerId, projectId, tx);
 
+        if (version.status === DocumentStatus.REJECTED || version.status === DocumentStatus.APTO) {
+          throw new HttpError(409, "Cannot review a version that is rejected or already approved");
+        }
         if (version.status !== DocumentStatus.UNDER_REVIEW) {
           throw new HttpError(409, "Reviews are only accepted while the version is UNDER_REVIEW");
         }
@@ -352,6 +358,14 @@ export const documentsService = {
         });
 
         if (decision === "REJECTED") {
+          await tx.review.updateMany({
+            where: {
+              documentVersionId,
+              id: { not: review.id },
+              status: ReviewStatus.PENDING,
+            },
+            data: { status: ReviewStatus.REJECTED, comment: null },
+          });
           await tx.documentVersion.update({
             where: { id: documentVersionId },
             data: { status: DocumentStatus.REJECTED },
