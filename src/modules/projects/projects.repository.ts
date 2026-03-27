@@ -23,4 +23,22 @@ export const projectsRepository = {
       where: { projectId_companyId: { projectId, companyId } },
     });
   },
+
+  /** Distinct user ids for all companies linked to the project (from DB). */
+  async listParticipantUserIds(projectId: string, tx?: Prisma.TransactionClient): Promise<string[]> {
+    const client = tx ?? prisma;
+    const links = await client.projectCompany.findMany({
+      where: { projectId },
+      select: { companyId: true },
+    });
+    const companyIds = links.map((l) => l.companyId);
+    if (companyIds.length === 0) {
+      return [];
+    }
+    const users = await client.user.findMany({
+      where: { companyId: { in: companyIds } },
+      select: { id: true },
+    });
+    return [...new Set(users.map((u) => u.id))];
+  },
 };

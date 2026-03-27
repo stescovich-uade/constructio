@@ -6,6 +6,8 @@ import { HttpError } from "../../core/errors/http-error.js";
 import { isPrismaUniqueViolation } from "../../core/utils/prisma-errors.js";
 import { assertUserInProject } from "../auth/authorization.service.js";
 import { AUDIT_ACTIONS, ENTITY_TYPES, auditService } from "../audit/audit.service.js";
+import { notificationsService } from "../notifications/notifications.service.js";
+import { projectsRepository } from "../projects/projects.repository.js";
 import { documentsRepository } from "./documents.repository.js";
 
 export type CreateDocumentParams = {
@@ -62,6 +64,38 @@ function mapPromoteVersionDbError(error: unknown): HttpError | null {
   return null;
 }
 
+/** Version uploader from audit, else document creator — always DB-backed user ids. */
+async function resolveDocumentStakeholderUserId(
+  documentVersionId: string,
+  documentId: string,
+  tx: Prisma.TransactionClient,
+): Promise<string | null> {
+  const versionLog = await tx.auditLog.findFirst({
+    where: {
+      action: AUDIT_ACTIONS.DOCUMENT_VERSION_CREATED,
+      entityType: ENTITY_TYPES.DocumentVersion,
+      entityId: documentVersionId,
+      userId: { not: null },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { userId: true },
+  });
+  if (versionLog?.userId) {
+    return versionLog.userId;
+  }
+  const docLog = await tx.auditLog.findFirst({
+    where: {
+      action: AUDIT_ACTIONS.DOCUMENT_CREATED,
+      entityType: ENTITY_TYPES.Document,
+      entityId: documentId,
+      userId: { not: null },
+    },
+    orderBy: { createdAt: "asc" },
+    select: { userId: true },
+  });
+  return docLog?.userId ?? null;
+}
+
 async function promoteVersionToAptoInTx(
   documentVersionId: string,
   userId: string,
@@ -95,6 +129,16 @@ async function promoteVersionToAptoInTx(
         documentId: version.documentId,
       },
     },
+    tx,
+  );
+
+  const aptoRecipients = (await projectsRepository.listParticipantUserIds(projectId, tx)).filter(
+    (uid) => uid !== userId,
+  );
+  await notificationsService.createNotificationsForUsers(
+    aptoRecipients,
+    "DOCUMENT_APPROVED",
+    documentVersionId,
     tx,
   );
 }
@@ -240,6 +284,15 @@ export const documentsService = {
         where: { id: documentVersionId },
         data: { status: DocumentStatus.SUBMITTED },
       });
+
+      const participantIds = await projectsRepository.listParticipantUserIds(projectId, tx);
+      const submitNotifyRecipients = participantIds.filter((uid) => uid !== userId);
+      await notificationsService.createNotificationsForUsers(
+        submitNotifyRecipients,
+        "DOCUMENT_SUBMITTED",
+        documentVersionId,
+        tx,
+      );
     });
   },
 
@@ -294,6 +347,10 @@ export const documentsService = {
             where: { id: documentVersionId },
             data: { status: DocumentStatus.UNDER_REVIEW },
           });
+        }
+
+        if (userId !== assignerId) {
+          await notificationsService.createNotification(userId, "REVIEW_ASSIGNED", documentVersionId, tx);
         }
       });
     } catch (error: unknown) {
@@ -370,6 +427,19 @@ export const documentsService = {
             where: { id: documentVersionId },
             data: { status: DocumentStatus.REJECTED },
           });
+          const rejectStakeholder = await resolveDocumentStakeholderUserId(
+            documentVersionId,
+            version.documentId,
+            tx,
+          );
+          if (rejectStakeholder && rejectStakeholder !== reviewerId) {
+            await notificationsService.createNotification(
+              rejectStakeholder,
+              "DOCUMENT_REJECTED",
+              documentVersionId,
+              tx,
+            );
+          }
           return;
         }
 
@@ -377,6 +447,19 @@ export const documentsService = {
           where: { documentVersionId, status: { not: ReviewStatus.APPROVED } },
         });
         if (notApproved > 0) {
+          const partialStakeholder = await resolveDocumentStakeholderUserId(
+            documentVersionId,
+            version.documentId,
+            tx,
+          );
+          if (partialStakeholder && partialStakeholder !== reviewerId) {
+            await notificationsService.createNotification(
+              partialStakeholder,
+              "DOCUMENT_APPROVED_PARTIAL",
+              documentVersionId,
+              tx,
+            );
+          }
           return;
         }
 
