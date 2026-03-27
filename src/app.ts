@@ -9,6 +9,7 @@ import { companiesRouter } from "./modules/companies/companies.routes.js";
 import { documentsRouter } from "./modules/documents/documents.routes.js";
 import { projectsRouter } from "./modules/projects/projects.routes.js";
 import { rfiRouter } from "./modules/rfi/rfi.routes.js";
+import { notificationsRouter } from "./modules/notifications/notifications.routes.js";
 import { threadsRouter } from "./modules/threads/threads.routes.js";
 import { usersRouter } from "./modules/users/users.routes.js";
 
@@ -31,6 +32,7 @@ export function createApp() {
   app.use("/documents", documentsRouter);
   app.use("/rfi", rfiRouter);
   app.use("/audit", auditRouter);
+  app.use("/notifications", notificationsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
