@@ -22,9 +22,30 @@ export type CreateVersionParams = {
   fileUrl: string;
 };
 
-function isDocumentVersionNotFoundFromDb(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("DocumentVersion not found");
+function getErrorMessageDeep(error: unknown): string {
+  if (error instanceof Error) {
+    const cause = error.cause;
+    if (cause instanceof Error) {
+      return `${error.message} ${cause.message}`;
+    }
+    return error.message;
+  }
+  return String(error);
+}
+
+/** Maps RAISE from promote_version_to_apto (and driver-wrapped messages). */
+function mapPromoteVersionDbError(error: unknown): HttpError | null {
+  const message = getErrorMessageDeep(error);
+  if (message.includes("DocumentVersion not found")) {
+    return new HttpError(404, "DocumentVersion not found");
+  }
+  if (message.includes("User not found")) {
+    return new HttpError(404, "User not found");
+  }
+  if (message.includes("User not authorized")) {
+    return new HttpError(403, "User not authorized for this project");
+  }
+  return null;
 }
 
 export const documentsService = {
@@ -162,7 +183,9 @@ export const documentsService = {
         const projectId = version.document.thread.projectId;
         await assertUserInProject(userId, projectId, tx);
 
-        await tx.$executeRaw(Prisma.sql`SELECT promote_version_to_apto(${documentVersionId})`);
+        await tx.$executeRaw(
+          Prisma.sql`SELECT promote_version_to_apto(${documentVersionId}, ${userId})`,
+        );
 
         await auditService.log(
           {
@@ -183,8 +206,9 @@ export const documentsService = {
       if (error instanceof HttpError) {
         throw error;
       }
-      if (isDocumentVersionNotFoundFromDb(error)) {
-        throw new HttpError(404, "DocumentVersion not found");
+      const mapped = mapPromoteVersionDbError(error);
+      if (mapped) {
+        throw mapped;
       }
       if (isPrismaUniqueViolation(error)) {
         throw new HttpError(
