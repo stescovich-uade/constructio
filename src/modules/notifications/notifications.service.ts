@@ -2,7 +2,11 @@ import type { Notification, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../core/database/prisma.js";
 import { HttpError } from "../../core/errors/http-error.js";
-import { buildNotification } from "./notifications.templates.js";
+import {
+  buildNotification,
+  notificationTemplateAction,
+  type NotificationAction,
+} from "./notifications.templates.js";
 
 export const DEFAULT_NOTIFICATION_LIMIT = 20;
 export const MAX_NOTIFICATION_LIMIT = 50;
@@ -31,16 +35,25 @@ function resolveNotificationCopy(
   data: Record<string, unknown> | undefined,
   titleOverride?: string,
   bodyOverride?: string | null,
+  entityId?: string | null,
 ): { title: string; body: string | null } {
   if (titleOverride !== undefined && titleOverride.trim().length > 0) {
     return { title: titleOverride.trim(), body: bodyOverride ?? null };
   }
-  const built = buildNotification({ type, data: data as Record<string, any> | undefined });
+  const built = buildNotification({
+    type,
+    data: data as Record<string, any> | undefined,
+    entityId: entityId ?? null,
+  });
   return { title: built.title, body: built.body ?? null };
 }
 
+export type NotificationWithAction = Notification & { action?: NotificationAction };
+
+export type { NotificationAction };
+
 export type NotificationListResult = {
-  items: Notification[];
+  items: NotificationWithAction[];
   nextCursor: string | null;
 };
 
@@ -49,8 +62,9 @@ export type NotificationGroup = {
   entityId: string | null;
   count: number;
   latestCreatedAt: Date;
+  action?: NotificationAction;
   /** Up to the three most recent rows in this group (same order as list: newest first). */
-  notifications: Notification[];
+  notifications: NotificationWithAction[];
 };
 
 export type GroupedNotificationListResult = {
@@ -66,6 +80,13 @@ function groupKey(n: Notification): string {
   const day = utcCalendarDay(n.createdAt);
   const entity = n.entityId ?? "";
   return `${n.type}\0${entity}\0${day}`;
+}
+
+function enrichNotificationRow(n: Notification): NotificationWithAction {
+  return {
+    ...n,
+    action: notificationTemplateAction({ type: n.type, entityId: n.entityId }),
+  };
 }
 
 function encodeNotificationCursor(createdAt: Date, id: string): string {
@@ -102,6 +123,7 @@ export const notificationsService = {
       params.data,
       params.title,
       params.body,
+      params.entityId,
     );
     const client = params.tx ?? prisma;
     return client.notification.create({
@@ -132,6 +154,7 @@ export const notificationsService = {
       payload.data,
       payload.title,
       payload.body,
+      payload.entityId,
     );
     const client = tx ?? prisma;
     await client.notification.createMany({
@@ -197,12 +220,12 @@ export const notificationsService = {
     });
 
     const hasMore = rows.length > limit;
-    const items = hasMore ? rows.slice(0, limit) : rows;
-    const last = items[items.length - 1];
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
     const nextCursor =
       hasMore && last ? encodeNotificationCursor(last.createdAt, last.id) : null;
 
-    return { items, nextCursor };
+    return { items: page.map(enrichNotificationRow), nextCursor };
   },
 
   /**
@@ -215,7 +238,7 @@ export const notificationsService = {
   ): Promise<GroupedNotificationListResult> {
     const { items, nextCursor } = await notificationsService.getUserNotifications(userId, options);
 
-    const buckets = new Map<string, Notification[]>();
+    const buckets = new Map<string, NotificationWithAction[]>();
     for (const n of items) {
       const key = groupKey(n);
       const list = buckets.get(key);
@@ -241,6 +264,7 @@ export const notificationsService = {
         entityId: latest.entityId,
         count: sorted.length,
         latestCreatedAt: latest.createdAt,
+        action: notificationTemplateAction({ type: latest.type, entityId: latest.entityId }),
         notifications: sorted.slice(0, Math.min(3, sorted.length)),
       });
     }
