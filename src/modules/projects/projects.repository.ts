@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../core/database/prisma.js";
 
 export const projectsRepository = {
@@ -24,21 +24,15 @@ export const projectsRepository = {
     });
   },
 
-  /** Distinct user ids for all companies linked to the project (from DB). */
+  /** Distinct user ids for all companies linked to the project — single JOIN, one round-trip. */
   async listParticipantUserIds(projectId: string, tx?: Prisma.TransactionClient): Promise<string[]> {
     const client = tx ?? prisma;
-    const links = await client.projectCompany.findMany({
-      where: { projectId },
-      select: { companyId: true },
-    });
-    const companyIds = links.map((l) => l.companyId);
-    if (companyIds.length === 0) {
-      return [];
-    }
-    const users = await client.user.findMany({
-      where: { companyId: { in: companyIds } },
-      select: { id: true },
-    });
-    return [...new Set(users.map((u) => u.id))];
+    const rows = await client.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT DISTINCT u.id
+      FROM "User" u
+      INNER JOIN "ProjectCompany" pc ON pc."companyId" = u."companyId"
+      WHERE pc."projectId" = ${projectId}
+    `);
+    return rows.map((r) => r.id);
   },
 };

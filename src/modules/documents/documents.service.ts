@@ -447,19 +447,6 @@ export const documentsService = {
           where: { documentVersionId, status: { not: ReviewStatus.APPROVED } },
         });
         if (notApproved > 0) {
-          const partialStakeholder = await resolveDocumentStakeholderUserId(
-            documentVersionId,
-            version.documentId,
-            tx,
-          );
-          if (partialStakeholder && partialStakeholder !== reviewerId) {
-            await notificationsService.createNotification(
-              partialStakeholder,
-              "DOCUMENT_APPROVED_PARTIAL",
-              documentVersionId,
-              tx,
-            );
-          }
           return;
         }
 
