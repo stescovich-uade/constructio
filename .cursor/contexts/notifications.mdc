@@ -1,0 +1,71 @@
+---
+alwaysApply: true
+---
+
+# Notifications UX
+
+The notification system is a core part of the product.
+
+---
+
+# Behavior
+
+- Notifications are user-specific
+- They are fetched via API
+- Polling is used to detect updates
+
+---
+
+# Types
+
+Examples:
+- Document approved
+- Document rejected
+- Document assigned
+- Document submitted
+
+---
+
+# UI Behavior
+
+- Notifications appear in a dropdown (topbar)
+- Show:
+  - title
+  - optional body
+  - timestamp
+- Group similar notifications
+
+---
+
+# Interaction
+
+- Clicking a notification triggers its action
+- Usually navigation to a specific entity
+
+---
+
+# Read State
+
+- Notifications can be:
+  - unread
+  - read
+- Users can:
+  - mark individual as read
+  - mark all as read
+
+---
+
+# Grouping
+
+- Notifications are grouped by:
+  - type
+  - entity
+  - date
+
+---
+
+# UX Principles
+
+- Avoid overwhelming the user
+- Show only relevant information
+- Prioritize most recent activity

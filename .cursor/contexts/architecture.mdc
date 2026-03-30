@@ -2,11 +2,17 @@
 alwaysApply: true
 ---
 
+---
+alwaysApply: true
+---
+
 # ARCHITECTURE CONTEXT
 
-You are a senior software architect.
+You are a senior software architect designing a scalable SaaS platform.
 
-## STACK
+---
+
+# BACKEND STACK
 
 - Node.js
 - TypeScript
@@ -14,22 +20,140 @@ You are a senior software architect.
 - PostgreSQL
 - Modular architecture
 
-## ARCHITECTURE RULES
+---
+
+# FRONTEND STACK
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- TanStack Query
+- Zustand
+
+---
+
+# CORE ARCHITECTURE PRINCIPLES
 
 - Use domain-driven modular structure
 - Each module must be isolated
 - No circular dependencies
-- Business logic must NOT be in controllers
+- Code must be scalable and testable
+- Avoid shortcuts
 
-## LAYERS
+---
 
-- Controller → handles HTTP
+# BACKEND LAYERS
+
+- Controller → handles HTTP only
 - Service → business logic
-- Repository → DB access
+- Repository → database access
 - Domain → rules and entities
 
-## REQUIREMENTS
+## RULES
 
-- Every module must be scalable
-- Code must be testable
-- No shortcuts
+- Business logic must NEVER be in controllers
+- Controllers must be thin
+- Services must contain all business logic
+- Repositories must not contain business logic
+- Domain layer must be pure
+
+---
+
+# FRONTEND ARCHITECTURE
+
+## STRUCTURE
+
+/app
+  /(auth)
+  /dashboard
+  /projects
+  /documents
+  /notifications
+  /admin
+
+---
+
+## RULES
+
+- Use server components by default
+- Use client components only when necessary
+- Keep components small and reusable
+- Avoid prop drilling
+
+---
+
+# FRONTEND DATA FLOW
+
+- React Query → server state
+- Zustand → UI/global state only
+- No direct fetch calls inside components
+- Use a centralized API client
+
+---
+
+# FRONTEND SECURITY
+
+- Never trust frontend state
+- All permissions must be enforced in backend
+- Frontend only reflects allowed actions
+
+---
+
+# API INTEGRATION
+
+- Frontend communicates via REST API
+- All endpoints must be typed
+- Use consistent response structures
+
+---
+
+# NOTIFICATIONS ARCHITECTURE
+
+- Notifications are created in backend
+- Frontend only consumes and renders
+- Actions are defined by backend (never frontend)
+- Polling is used for near real-time updates
+
+---
+
+# URL STRATEGY
+
+- Clean and predictable routes
+
+Examples:
+- /projects/:id
+- /documents/:id
+- /admin/users
+
+---
+
+# MULTI-TENANCY
+
+- Data must be isolated per company
+- Backend enforces isolation
+- Frontend reflects only allowed data
+
+---
+
+# PERFORMANCE
+
+- Avoid unnecessary DB queries
+- Use pagination everywhere
+- Use caching in frontend (React Query)
+
+---
+
+# ERROR HANDLING
+
+- Backend returns structured errors
+- Frontend shows user-friendly messages
+- Never expose internal errors
+
+---
+
+# FINAL RULE
+
+When in doubt:
+- Keep logic in backend
+- Keep frontend simple and declarative

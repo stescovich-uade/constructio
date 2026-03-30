@@ -1,0 +1,68 @@
+---
+alwaysApply: true
+---
+
+# Frontend Architecture
+
+The frontend is built as a modern SaaS application.
+
+---
+
+# Stack
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- TanStack Query (React Query)
+- Zustand (minimal global state)
+
+---
+
+# Structure
+
+/app
+  /(auth)
+  /dashboard
+  /projects
+  /documents
+  /notifications
+  /admin
+
+---
+
+# Principles
+
+- Prefer server components when possible
+- Use client components only when necessary
+- Keep components small and reusable
+- Avoid prop drilling
+
+---
+
+# Data Fetching
+
+- All server communication goes through a centralized API layer
+- Use React Query for caching and synchronization
+- Avoid direct fetch calls inside components
+
+---
+
+# State Management
+
+- React Query → server state
+- Zustand → UI/global state only
+
+---
+
+# Routing
+
+- Clear separation between user area and admin area
+- Admin routes must be protected by role
+
+---
+
+# Error Handling
+
+- Graceful UI fallback for all errors
+- Never expose raw backend errors to users

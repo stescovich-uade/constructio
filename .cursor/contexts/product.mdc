@@ -1,0 +1,65 @@
+---
+alwaysApply: true
+---
+
+# Product Overview
+
+This is a SaaS platform for document management and approval workflows.
+
+The system allows companies to manage projects, upload documents, and run structured approval processes across multiple participants.
+
+---
+
+# User Types
+
+## 1. End Users (SaaS Users)
+
+These are companies and their members.
+
+They can:
+- Create and manage projects
+- Upload and manage documents
+- Participate in approval workflows
+- Receive and interact with notifications
+
+---
+
+## 2. Super Admin (Platform Owner)
+
+This is the platform-level administrator.
+
+They can:
+- Manage all users and companies
+- Configure system-wide limits
+- Configure notification behavior
+- Manage storage integrations (e.g. AWS S3)
+- Manage email systems (e.g. Resend)
+- Access metrics and system insights
+
+---
+
+# Core Features
+
+- Projects
+- Documents
+- Document Versions
+- Approval Workflows
+- Notifications system
+- Multi-tenant company separation
+
+---
+
+# Product Principles
+
+- The system must feel simple despite complex workflows
+- UX must prioritize clarity over density
+- Actions must be obvious and guided
+- The system should reduce friction in approval processes
+
+---
+
+# Multi-Tenancy
+
+- Each company operates independently
+- Data must be logically isolated per company
+- Users belong to companies

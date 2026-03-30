@@ -1,0 +1,79 @@
+---
+alwaysApply: true
+---
+
+# Design System
+
+The UI must feel like a modern SaaS product (similar to Notion, Linear, Vercel).
+
+---
+
+# Principles
+
+- Minimal
+- Clean
+- Functional
+- Consistent
+
+---
+
+# Layout
+
+- Sidebar navigation (primary)
+- Topbar for actions and notifications
+- Content centered with max-width
+- Generous spacing
+
+---
+
+# Components
+
+- Cards for grouping content
+- Tables for structured data
+- Modals for actions
+- Dropdowns for secondary actions
+
+---
+
+# Spacing
+
+- Use consistent spacing scale (Tailwind)
+- Avoid cramped layouts
+- Prioritize readability
+
+---
+
+# Colors
+
+- Neutral base (gray/white)
+- Accent color for actions
+- Clear states:
+  - success (green)
+  - warning (yellow)
+  - error (red)
+
+---
+
+# Typography
+
+- Clear hierarchy:
+  - Page title
+  - Section title
+  - Body
+- Avoid excessive font variation
+
+---
+
+# UX Rules
+
+- Every action must be obvious
+- Avoid hidden interactions
+- Prefer explicit buttons over implicit gestures
+- Feedback must be immediate
+
+---
+
+# Reusability
+
+- Components must be reusable
+- Avoid one-off UI patterns
