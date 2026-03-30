@@ -112,7 +112,6 @@ async function notifyDocumentApprovedAfterCommit(
     const recipients = userIds.filter((uid) => uid !== actorUserId);
     await notificationsService.createManyNotifications(recipients, {
       type: "DOCUMENT_APPROVED",
-      title: "Document approved",
       entityId: documentId,
     });
   } catch (error: unknown) {
@@ -305,8 +304,6 @@ export const documentsService = {
         submitNotifyRecipients,
         {
           type: "DOCUMENT_SUBMITTED",
-          title: "Document submitted",
-          body: "A new version has been submitted for review.",
           entityId: documentVersionId,
         },
         tx,
@@ -370,9 +367,7 @@ export const documentsService = {
         if (userId !== assignerId) {
           await notificationsService.createNotification({
             userId,
-            type: "REVIEW_ASSIGNED",
-            title: "Review assigned",
-            body: "You have been assigned to review a document version.",
+            type: "DOCUMENT_ASSIGNED",
             entityId: documentVersionId,
             tx,
           });
@@ -461,8 +456,6 @@ export const documentsService = {
             await notificationsService.createNotification({
               userId: rejectStakeholder,
               type: "DOCUMENT_REJECTED",
-              title: "Document rejected",
-              body: "A document version you are involved with was rejected.",
               entityId: documentVersionId,
               tx,
             });

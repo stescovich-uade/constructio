@@ -2,6 +2,7 @@ import type { Notification, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../core/database/prisma.js";
 import { HttpError } from "../../core/errors/http-error.js";
+import { buildNotification } from "./notifications.templates.js";
 
 export const DEFAULT_NOTIFICATION_LIMIT = 20;
 export const MAX_NOTIFICATION_LIMIT = 50;
@@ -9,18 +10,34 @@ export const MAX_NOTIFICATION_LIMIT = 50;
 export type CreateNotificationParams = {
   userId: string;
   type: string;
-  title: string;
-  body?: string | null;
+  data?: Record<string, unknown>;
   entityId?: string | null;
   tx?: Prisma.TransactionClient;
+  /** When set (non-empty), skips templates for copy (temporary backward compatibility). */
+  title?: string;
+  body?: string | null;
 };
 
 export type NotificationPayload = {
   type: string;
-  title: string;
-  body?: string | null;
+  data?: Record<string, unknown>;
   entityId?: string | null;
+  title?: string;
+  body?: string | null;
 };
+
+function resolveNotificationCopy(
+  type: string,
+  data: Record<string, unknown> | undefined,
+  titleOverride?: string,
+  bodyOverride?: string | null,
+): { title: string; body: string | null } {
+  if (titleOverride !== undefined && titleOverride.trim().length > 0) {
+    return { title: titleOverride.trim(), body: bodyOverride ?? null };
+  }
+  const built = buildNotification({ type, data: data as Record<string, any> | undefined });
+  return { title: built.title, body: built.body ?? null };
+}
 
 export type NotificationListResult = {
   items: Notification[];
@@ -80,13 +97,19 @@ function decodeNotificationCursor(cursor: string): { createdAt: Date; id: string
 
 export const notificationsService = {
   async createNotification(params: CreateNotificationParams): Promise<Notification> {
+    const { title, body } = resolveNotificationCopy(
+      params.type,
+      params.data,
+      params.title,
+      params.body,
+    );
     const client = params.tx ?? prisma;
     return client.notification.create({
       data: {
         userId: params.userId,
         type: params.type,
-        title: params.title,
-        body: params.body ?? null,
+        title,
+        body,
         entityId: params.entityId ?? null,
       },
     });
@@ -104,13 +127,19 @@ export const notificationsService = {
     if (uniqueRecipients.length === 0) {
       return;
     }
+    const { title, body } = resolveNotificationCopy(
+      payload.type,
+      payload.data,
+      payload.title,
+      payload.body,
+    );
     const client = tx ?? prisma;
     await client.notification.createMany({
       data: uniqueRecipients.map((userId) => ({
         userId,
         type: payload.type,
-        title: payload.title,
-        body: payload.body ?? null,
+        title,
+        body,
         entityId: payload.entityId ?? null,
       })),
     });
