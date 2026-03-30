@@ -108,6 +108,15 @@ export const notificationsService = {
     });
   },
 
+  /** Single aggregate over `userId` (indexed); for lightweight poll vs previous timestamp. */
+  async getLatestNotificationTimestamp(userId: string): Promise<Date | null> {
+    const agg = await prisma.notification.aggregate({
+      where: { userId },
+      _max: { createdAt: true },
+    });
+    return agg._max.createdAt ?? null;
+  },
+
   /**
    * Cursor is opaque (createdAt + id); rows are always filtered by `userId` so cursors cannot leak other users' data.
    */

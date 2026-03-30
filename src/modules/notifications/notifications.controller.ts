@@ -21,6 +21,12 @@ export async function getUnreadCount(req: Request, res: Response): Promise<void>
   res.status(200).json({ count });
 }
 
+export async function getLastNotificationTimestamp(req: Request, res: Response): Promise<void> {
+  const userId = req.auth!.userId;
+  const lastCreatedAt = await notificationsService.getLatestNotificationTimestamp(userId);
+  res.status(200).json({ lastCreatedAt });
+}
+
 export async function listNotifications(req: Request, res: Response): Promise<void> {
   const userId = req.auth!.userId;
   const query = listNotificationsQuerySchema.parse(req.query);
