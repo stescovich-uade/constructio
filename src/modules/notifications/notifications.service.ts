@@ -221,14 +221,26 @@ export const notificationsService = {
     return { groups, nextCursor };
   },
 
-  async markAsRead(notificationId: string, userId: string): Promise<void> {
+  /**
+   * Marks one notification read; scoped by `userId` so another user's row is never updated.
+   * Idempotent: repeated calls succeed if the row is already read.
+   */
+  async markAsRead(userId: string, notificationId: string): Promise<void> {
     const result = await prisma.notification.updateMany({
       where: { id: notificationId, userId },
       data: { read: true },
     });
-    if (result.count === 0) {
-      throw new HttpError(404, "Notification not found");
+    if (result.count > 0) {
+      return;
     }
+    const existing = await prisma.notification.findFirst({
+      where: { id: notificationId, userId },
+      select: { read: true },
+    });
+    if (existing?.read === true) {
+      return;
+    }
+    throw new HttpError(404, "Notification not found");
   },
 
   async markAllAsRead(userId: string): Promise<void> {

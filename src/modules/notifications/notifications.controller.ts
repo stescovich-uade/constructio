@@ -50,7 +50,7 @@ export async function listGroupedNotifications(req: Request, res: Response): Pro
 export async function markNotificationRead(req: Request, res: Response): Promise<void> {
   const { id } = notificationIdParamSchema.parse(req.params);
   const userId = req.auth!.userId;
-  await notificationsService.markAsRead(id, userId);
+  await notificationsService.markAsRead(userId, id);
   res.status(204).send();
 }
 
