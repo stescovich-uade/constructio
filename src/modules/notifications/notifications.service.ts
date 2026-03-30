@@ -11,6 +11,30 @@ export type NotificationListResult = {
   nextCursor: string | null;
 };
 
+export type NotificationGroup = {
+  type: string;
+  entityId: string | null;
+  count: number;
+  latestCreatedAt: Date;
+  /** Up to the three most recent rows in this group (same order as list: newest first). */
+  notifications: Notification[];
+};
+
+export type GroupedNotificationListResult = {
+  groups: NotificationGroup[];
+  nextCursor: string | null;
+};
+
+function utcCalendarDay(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function groupKey(n: Notification): string {
+  const day = utcCalendarDay(n.createdAt);
+  const entity = n.entityId ?? "";
+  return `${n.type}\0${entity}\0${day}`;
+}
+
 function encodeNotificationCursor(createdAt: Date, id: string): string {
   return Buffer.from(
     JSON.stringify({ v: 1, c: createdAt.toISOString(), id }),
@@ -127,6 +151,65 @@ export const notificationsService = {
       hasMore && last ? encodeNotificationCursor(last.createdAt, last.id) : null;
 
     return { items, nextCursor };
+  },
+
+  /**
+   * Fetches one paginated page via `getUserNotifications`, then merges rows that share
+   * type + entityId + UTC calendar day. `nextCursor` matches the flat list pagination.
+   */
+  async getGroupedNotifications(
+    userId: string,
+    options?: { limit?: number; cursor?: string | null },
+  ): Promise<GroupedNotificationListResult> {
+    const { items, nextCursor } = await notificationsService.getUserNotifications(userId, options);
+
+    const buckets = new Map<string, Notification[]>();
+    for (const n of items) {
+      const key = groupKey(n);
+      const list = buckets.get(key);
+      if (list) {
+        list.push(n);
+      } else {
+        buckets.set(key, [n]);
+      }
+    }
+
+    const groups: NotificationGroup[] = [];
+    for (const notifs of buckets.values()) {
+      const sorted = [...notifs].sort((a, b) => {
+        const t = b.createdAt.getTime() - a.createdAt.getTime();
+        if (t !== 0) {
+          return t;
+        }
+        return b.id.localeCompare(a.id);
+      });
+      const latest = sorted[0]!;
+      groups.push({
+        type: latest.type,
+        entityId: latest.entityId,
+        count: sorted.length,
+        latestCreatedAt: latest.createdAt,
+        notifications: sorted.slice(0, Math.min(3, sorted.length)),
+      });
+    }
+
+    groups.sort((a, b) => {
+      const t = b.latestCreatedAt.getTime() - a.latestCreatedAt.getTime();
+      if (t !== 0) {
+        return t;
+      }
+      if (a.type !== b.type) {
+        return a.type.localeCompare(b.type);
+      }
+      const ae = a.entityId ?? "";
+      const be = b.entityId ?? "";
+      if (ae !== be) {
+        return ae.localeCompare(be);
+      }
+      return 0;
+    });
+
+    return { groups, nextCursor };
   },
 
   async markAsRead(notificationId: string, userId: string): Promise<void> {

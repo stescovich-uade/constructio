@@ -31,6 +31,16 @@ export async function listNotifications(req: Request, res: Response): Promise<vo
   res.status(200).json({ data: items, nextCursor });
 }
 
+export async function listGroupedNotifications(req: Request, res: Response): Promise<void> {
+  const userId = req.auth!.userId;
+  const query = listNotificationsQuerySchema.parse(req.query);
+  const { groups, nextCursor } = await notificationsService.getGroupedNotifications(userId, {
+    limit: query.limit ?? DEFAULT_NOTIFICATION_LIMIT,
+    cursor: query.cursor,
+  });
+  res.status(200).json({ data: groups, nextCursor });
+}
+
 export async function markNotificationRead(req: Request, res: Response): Promise<void> {
   const { id } = notificationIdParamSchema.parse(req.params);
   const userId = req.auth!.userId;
