@@ -6,6 +6,22 @@ import { HttpError } from "../../core/errors/http-error.js";
 export const DEFAULT_NOTIFICATION_LIMIT = 20;
 export const MAX_NOTIFICATION_LIMIT = 50;
 
+export type CreateNotificationParams = {
+  userId: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  entityId?: string | null;
+  tx?: Prisma.TransactionClient;
+};
+
+export type NotificationPayload = {
+  type: string;
+  title: string;
+  body?: string | null;
+  entityId?: string | null;
+};
+
 export type NotificationListResult = {
   items: Notification[];
   nextCursor: string | null;
@@ -63,41 +79,39 @@ function decodeNotificationCursor(cursor: string): { createdAt: Date; id: string
 }
 
 export const notificationsService = {
-  async createNotification(
-    userId: string,
-    type: string,
-    entityId?: string | null,
-    tx?: Prisma.TransactionClient,
-  ): Promise<Notification> {
-    const client = tx ?? prisma;
+  async createNotification(params: CreateNotificationParams): Promise<Notification> {
+    const client = params.tx ?? prisma;
     return client.notification.create({
       data: {
-        userId,
-        type,
-        entityId: entityId ?? null,
+        userId: params.userId,
+        type: params.type,
+        title: params.title,
+        body: params.body ?? null,
+        entityId: params.entityId ?? null,
       },
     });
   },
 
   /**
-   * One row per recipient; `recipientUserIds` is de-duplicated to avoid duplicate rows in the same batch.
+   * Bulk insert; recipient list is de-duplicated. Optional `tx` for same transaction as other writes.
    */
-  async createNotificationsForUsers(
-    recipientUserIds: string[],
-    type: string,
-    entityId: string | null | undefined,
+  async createManyNotifications(
+    userIds: string[],
+    payload: NotificationPayload,
     tx?: Prisma.TransactionClient,
   ): Promise<void> {
-    const uniqueRecipients = [...new Set(recipientUserIds)];
+    const uniqueRecipients = [...new Set(userIds)];
     if (uniqueRecipients.length === 0) {
       return;
     }
     const client = tx ?? prisma;
     await client.notification.createMany({
-      data: uniqueRecipients.map((uid) => ({
-        userId: uid,
-        type,
-        entityId: entityId ?? null,
+      data: uniqueRecipients.map((userId) => ({
+        userId,
+        type: payload.type,
+        title: payload.title,
+        body: payload.body ?? null,
+        entityId: payload.entityId ?? null,
       })),
     });
   },

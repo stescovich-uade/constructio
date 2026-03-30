@@ -214,6 +214,8 @@ model Notification {
   id        String   @id @default(uuid())
   userId    String
   type      String
+  title     String
+  body      String?
   entityId  String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())

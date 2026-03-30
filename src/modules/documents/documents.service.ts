@@ -96,6 +96,30 @@ async function resolveDocumentStakeholderUserId(
   return docLog?.userId ?? null;
 }
 
+function logNotificationFailure(context: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[notifications] ${context}: ${message}`, error);
+}
+
+/** Runs outside any workflow transaction; failures are logged only. */
+async function notifyDocumentApprovedAfterCommit(
+  projectId: string,
+  documentId: string,
+  actorUserId: string,
+): Promise<void> {
+  try {
+    const userIds = await projectsRepository.listParticipantUserIds(projectId);
+    const recipients = userIds.filter((uid) => uid !== actorUserId);
+    await notificationsService.createManyNotifications(recipients, {
+      type: "DOCUMENT_APPROVED",
+      title: "Document approved",
+      entityId: documentId,
+    });
+  } catch (error: unknown) {
+    logNotificationFailure("DOCUMENT_APPROVED after commit", error);
+  }
+}
+
 async function promoteVersionToAptoInTx(
   documentVersionId: string,
   userId: string,
@@ -129,16 +153,6 @@ async function promoteVersionToAptoInTx(
         documentId: version.documentId,
       },
     },
-    tx,
-  );
-
-  const aptoRecipients = (await projectsRepository.listParticipantUserIds(projectId, tx)).filter(
-    (uid) => uid !== userId,
-  );
-  await notificationsService.createNotificationsForUsers(
-    aptoRecipients,
-    "DOCUMENT_APPROVED",
-    documentVersionId,
     tx,
   );
 }
@@ -287,10 +301,14 @@ export const documentsService = {
 
       const participantIds = await projectsRepository.listParticipantUserIds(projectId, tx);
       const submitNotifyRecipients = participantIds.filter((uid) => uid !== userId);
-      await notificationsService.createNotificationsForUsers(
+      await notificationsService.createManyNotifications(
         submitNotifyRecipients,
-        "DOCUMENT_SUBMITTED",
-        documentVersionId,
+        {
+          type: "DOCUMENT_SUBMITTED",
+          title: "Document submitted",
+          body: "A new version has been submitted for review.",
+          entityId: documentVersionId,
+        },
         tx,
       );
     });
@@ -350,7 +368,14 @@ export const documentsService = {
         }
 
         if (userId !== assignerId) {
-          await notificationsService.createNotification(userId, "REVIEW_ASSIGNED", documentVersionId, tx);
+          await notificationsService.createNotification({
+            userId,
+            type: "REVIEW_ASSIGNED",
+            title: "Review assigned",
+            body: "You have been assigned to review a document version.",
+            entityId: documentVersionId,
+            tx,
+          });
         }
       });
     } catch (error: unknown) {
@@ -380,7 +405,7 @@ export const documentsService = {
     }
 
     try {
-      await prisma.$transaction(async (tx) => {
+      const promotedToApto = await prisma.$transaction(async (tx) => {
         const version = await documentsRepository.findVersionByIdWithReviews(documentVersionId, tx);
         if (!version) {
           throw new HttpError(404, "DocumentVersion not found");
@@ -433,25 +458,43 @@ export const documentsService = {
             tx,
           );
           if (rejectStakeholder && rejectStakeholder !== reviewerId) {
-            await notificationsService.createNotification(
-              rejectStakeholder,
-              "DOCUMENT_REJECTED",
-              documentVersionId,
+            await notificationsService.createNotification({
+              userId: rejectStakeholder,
+              type: "DOCUMENT_REJECTED",
+              title: "Document rejected",
+              body: "A document version you are involved with was rejected.",
+              entityId: documentVersionId,
               tx,
-            );
+            });
           }
-          return;
+          return false;
         }
 
         const notApproved = await tx.review.count({
           where: { documentVersionId, status: { not: ReviewStatus.APPROVED } },
         });
         if (notApproved > 0) {
-          return;
+          return false;
         }
 
         await promoteVersionToAptoInTx(documentVersionId, reviewerId, tx);
+        return true;
       });
+
+      if (promotedToApto) {
+        try {
+          const v = await documentsRepository.findVersionById(documentVersionId);
+          if (v) {
+            await notifyDocumentApprovedAfterCommit(
+              v.document.thread.projectId,
+              v.documentId,
+              reviewerId,
+            );
+          }
+        } catch (error: unknown) {
+          logNotificationFailure("DOCUMENT_APPROVED after reviewVersion", error);
+        }
+      }
     } catch (error: unknown) {
       if (error instanceof HttpError) {
         throw error;
@@ -476,6 +519,18 @@ export const documentsService = {
       await prisma.$transaction(async (tx) => {
         await promoteVersionToAptoInTx(documentVersionId, userId, tx);
       });
+      try {
+        const v = await documentsRepository.findVersionById(documentVersionId);
+        if (v) {
+          await notifyDocumentApprovedAfterCommit(
+            v.document.thread.projectId,
+            v.documentId,
+            userId,
+          );
+        }
+      } catch (error: unknown) {
+        logNotificationFailure("DOCUMENT_APPROVED after promoteVersionToApto", error);
+      }
     } catch (error: unknown) {
       if (error instanceof HttpError) {
         throw error;
